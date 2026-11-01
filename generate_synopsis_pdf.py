@@ -1,0 +1,720 @@
+"""
+Generate PROJECT_SYNOPSIS.pdf according to exact university formatting guidelines
+and matching the official 12-page draft structure:
+- Official College Header Banner (college_header_official.png) on EVERY SINGLE PAGE
+- Exact students:
+  1. Aditya Chitimilla - 11385
+  2. Atharva Doke - 11388
+  3. Alroy Fernandes - 11393
+  Class: S.E. CSE - C, Academic Year: 2026-27, Guide: Prof. Afreen Sayed
+- Chen ER diagram (er_diagram.png) on Page 7
+- pgAdmin SQL query screenshots on Pages 8, 9, 10
+- Expected Outcome UI screenshots on Page 11
+- References and sign-off on Page 12
+"""
+
+import os
+import subprocess
+import time
+import pypdf
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DOCS_DIR = os.path.join(BASE_DIR, "docs")
+DIAG_DIR = os.path.join(DOCS_DIR, "diagrams")
+PDF_PATH = os.path.join(DOCS_DIR, "PROJECT_SYNOPSIS.pdf")
+HTML_PATH = os.path.join(DOCS_DIR, "synopsis_print.html")
+EDGE_PATH = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+
+
+def to_file_url(path):
+    return "file:///" + os.path.abspath(path).replace("\\", "/")
+
+
+def generate_synopsis_pdf():
+    # Asset URLs
+    college_hdr = to_file_url(os.path.join(DIAG_DIR, "college_header_official.png"))
+    er_img = to_file_url(os.path.join(DIAG_DIR, "er_diagram.png"))
+    q_books_ddl = to_file_url(os.path.join(DIAG_DIR, "pgadmin_query_books_ddl.png"))
+    q_books_sel = to_file_url(os.path.join(DIAG_DIR, "pgadmin_query_books_select.png"))
+    q_members_ins = to_file_url(os.path.join(DIAG_DIR, "pgadmin_query_members_insert.png"))
+    q_join = to_file_url(os.path.join(DIAG_DIR, "pgadmin_query_join.png"))
+    q_subquery = to_file_url(os.path.join(DIAG_DIR, "pgadmin_query_subquery_avg.png"))
+    q_loans = to_file_url(os.path.join(DIAG_DIR, "pgadmin_query_loans.png"))
+    dash_img = to_file_url(os.path.join(DIAG_DIR, "screenshot_dashboard.png"))
+    modal_img = to_file_url(os.path.join(DIAG_DIR, "screenshot_add_book_modal.png"))
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Micro Project Synopsis - Library Management System</title>
+<style>
+    @page {{
+        size: A4 portrait;
+        margin: 0;
+    }}
+    * {{
+        box-sizing: border-box;
+    }}
+    body {{
+        margin: 0;
+        padding: 0;
+        font-family: "Times New Roman", Times, serif;
+        font-size: 11.5pt;
+        line-height: 1.45;
+        color: #000000;
+        background: #ffffff;
+    }}
+    .doc-page {{
+        width: 210mm;
+        height: 297mm;
+        max-height: 297mm;
+        padding: 10mm 20mm 14mm 20mm;
+        page-break-after: always;
+        page-break-inside: avoid;
+        position: relative;
+        overflow: hidden;
+        background: #ffffff;
+    }}
+    .header-box {{
+        text-align: center;
+        margin-bottom: 5mm;
+        width: 100%;
+    }}
+    .header-box img {{
+        width: 100%;
+        max-width: 170mm;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+    }}
+    .footer-box {{
+        position: absolute;
+        bottom: 8mm;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-family: "Times New Roman", Times, serif;
+        font-size: 11pt;
+        color: #000000;
+    }}
+    h1 {{
+        font-size: 13.5pt;
+        font-weight: bold;
+        margin-top: 8pt;
+        margin-bottom: 4pt;
+        color: #000000;
+    }}
+    h2 {{
+        font-size: 12pt;
+        font-weight: bold;
+        margin-top: 6pt;
+        margin-bottom: 3pt;
+        color: #000000;
+    }}
+    h3 {{
+        font-size: 11.5pt;
+        font-weight: bold;
+        margin-top: 4pt;
+        margin-bottom: 2pt;
+        color: #000000;
+    }}
+    p {{
+        text-align: justify;
+        margin-top: 0;
+        margin-bottom: 5pt;
+        line-height: 1.42;
+    }}
+    ul, ol {{
+        margin-top: 0;
+        margin-bottom: 5pt;
+        padding-left: 20pt;
+    }}
+    li {{
+        margin-bottom: 2pt;
+        line-height: 1.38;
+        text-align: justify;
+    }}
+    table.spec-table {{
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 4pt;
+        margin-bottom: 6pt;
+        font-size: 10.5pt;
+    }}
+    table.spec-table th, table.spec-table td {{
+        border: 1px solid #333333;
+        padding: 4pt 7pt;
+        text-align: left;
+    }}
+    table.spec-table th {{
+        background-color: #f2f2f2;
+        font-weight: bold;
+    }}
+    .toc-table {{
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 4pt;
+        margin-bottom: 8pt;
+        font-size: 11pt;
+    }}
+    .toc-table td {{
+        padding: 2.5pt 0;
+        border-bottom: 1px dotted #bbbbbb;
+    }}
+    .toc-table td.toc-page {{
+        text-align: right;
+        font-weight: bold;
+        width: 40px;
+    }}
+    .figure-container {{
+        text-align: center;
+        margin: 5pt 0;
+    }}
+    .figure-container img {{
+        max-width: 100%;
+        border: 1px solid #cccccc;
+        border-radius: 2px;
+        display: block;
+        margin: 0 auto;
+    }}
+    .figure-caption {{
+        font-size: 10pt;
+        font-style: italic;
+        margin-top: 3pt;
+        color: #333333;
+        text-align: center;
+    }}
+    .code-snippet {{
+        font-family: "Courier New", Courier, monospace;
+        font-size: 9pt;
+        background-color: #f8f9fa;
+        border: 1px solid #dcdcdc;
+        padding: 4pt 6pt;
+        border-radius: 3px;
+        margin: 3pt 0;
+        text-align: left;
+        white-space: pre-wrap;
+    }}
+    .callout-box {{
+        background-color: #f9f9f9;
+        border-left: 3px solid #002147;
+        padding: 5pt 8pt;
+        margin: 5pt 0;
+        font-size: 10.5pt;
+    }}
+</style>
+</head>
+<body>
+
+<!-- ==================== PAGE 1: COVER PAGE ==================== -->
+<div class="doc-page">
+    <div class="header-box">
+        <img src="{college_hdr}" alt="Fr. Conceicao Rodrigues College of Engineering">
+    </div>
+    <div style="text-align: center; padding-top: 10pt;">
+        <div style="font-size: 17pt; font-weight: bold; letter-spacing: 1.5px; margin-bottom: 10pt;">
+            MICRO PROJECT SYNOPSIS
+        </div>
+        <div style="font-size: 13pt; font-weight: bold; margin-bottom: 10pt;">
+            ON
+        </div>
+        <div style="font-size: 17pt; font-weight: bold; text-transform: uppercase; margin-bottom: 20pt; color: #002147;">
+            Library Management System
+        </div>
+        <div style="font-size: 12pt; font-style: italic; margin-bottom: 5pt;">
+            Submitted for the Subject
+        </div>
+        <div style="font-size: 14pt; font-weight: bold; margin-bottom: 25pt;">
+            DATABASE MANAGEMENT SYSTEMS (DBMS)
+        </div>
+        
+        <div style="margin: 0 auto; width: 82%; text-align: left; font-size: 12pt; line-height: 1.6; margin-bottom: 22pt;">
+            <div style="font-weight: bold; margin-bottom: 6pt; font-size: 12.5pt; text-decoration: underline;">Submitted By:</div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 12pt;">
+                <tr><td style="width: 35px; padding: 3pt 0; font-weight: bold;">1.</td><td style="padding: 3pt 0; font-weight: bold;">Aditya Chitimilla</td><td style="padding: 3pt 0; font-weight: bold; text-align: right;">11385</td></tr>
+                <tr><td style="padding: 3pt 0; font-weight: bold;">2.</td><td style="padding: 3pt 0; font-weight: bold;">Atharva Doke</td><td style="padding: 3pt 0; font-weight: bold; text-align: right;">11388</td></tr>
+                <tr><td style="padding: 3pt 0; font-weight: bold;">3.</td><td style="padding: 3pt 0; font-weight: bold;">Alroy Fernandes</td><td style="padding: 3pt 0; font-weight: bold; text-align: right;">11393</td></tr>
+            </table>
+            <div style="margin-top: 10pt; font-size: 12pt;"><strong>Class:</strong> S.E. CSE - C</div>
+            <div style="font-size: 12pt;"><strong>Academic Year:</strong> 2026–27</div>
+        </div>
+        
+        <div style="font-size: 12pt; line-height: 1.5; margin-bottom: 25pt;">
+            <div><em>Under the Guidance of</em></div>
+            <div style="font-size: 13.5pt; font-weight: bold; margin-top: 4pt;">Prof. Afreen Sayed</div>
+        </div>
+        
+        <div style="font-size: 13pt; font-weight: bold; line-height: 1.4; color: #002147;">
+            Fr. Conceicao Rodrigues College of Engineering<br>
+            <span style="font-size: 12pt; color: #000000;">Department of Computer Science & Engineering</span>
+        </div>
+    </div>
+    <div class="footer-box">Page 1</div>
+</div>
+
+<!-- ==================== PAGE 2: FORMATTING SPECIFICATIONS ==================== -->
+<div class="doc-page">
+    <div class="header-box">
+        <img src="{college_hdr}" alt="Fr. Conceicao Rodrigues College of Engineering">
+    </div>
+    <div style="text-align: center; margin-bottom: 8pt;">
+        <h1 style="font-size: 13pt; text-transform: uppercase;">Formatting Specifications</h1>
+        <div style="font-size: 10.5pt; font-style: italic; color: #555555;">(Not to be printed, only for reference)</div>
+    </div>
+    
+    <table class="spec-table">
+        <thead>
+            <tr>
+                <th style="width: 38%;">Specification</th>
+                <th style="width: 62%;">Requirement</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>Paper Size</strong></td><td>A4</td></tr>
+            <tr><td><strong>Font Family</strong></td><td>Times New Roman</td></tr>
+            <tr><td><strong>Body Text</strong></td><td>12 pt, Regular</td></tr>
+            <tr><td><strong>Main Headings</strong></td><td>14 pt, Bold</td></tr>
+            <tr><td><strong>Subheadings</strong></td><td>12 pt, Bold</td></tr>
+            <tr><td><strong>Project Title</strong></td><td>16 pt, Bold, Center aligned</td></tr>
+            <tr><td><strong>Cover Page Main Heading</strong></td><td>18 pt, Bold, Center aligned</td></tr>
+            <tr><td><strong>Line Spacing</strong></td><td>1.5</td></tr>
+            <tr><td><strong>Paragraph Alignment</strong></td><td>Justified</td></tr>
+            <tr><td><strong>Margins</strong></td><td>Top: 0.75", Bottom: 0.75", Left: 1", Right: 1"</td></tr>
+            <tr><td><strong>Page Number</strong></td><td>Bottom-center</td></tr>
+            <tr><td><strong>Heading Numbering</strong></td><td>1, 2, 3…; subheadings 8.1, 8.2…</td></tr>
+            <tr><td><strong>Tables</strong></td><td>Times New Roman, 11–12 pt; captions above tables</td></tr>
+            <tr><td><strong>Figures/Diagrams</strong></td><td>Centered; caption below figure</td></tr>
+            <tr><td><strong>Printing</strong></td><td>A4, single-sided print, unless instructed otherwise</td></tr>
+        </tbody>
+    </table>
+    
+    <div class="callout-box" style="margin-top: 14pt;">
+        <strong>Important:</strong> Students should edit only the placeholders and project-specific content. Maintain the same formatting throughout the report.
+    </div>
+    
+    <div class="footer-box">Page 2</div>
+</div>
+
+<!-- ==================== PAGE 3: TOC & INTRO & PROBLEM STATEMENT ==================== -->
+<div class="doc-page">
+    <div class="header-box">
+        <img src="{college_hdr}" alt="Fr. Conceicao Rodrigues College of Engineering">
+    </div>
+    
+    <h1>Table of Content</h1>
+    <table class="toc-table">
+        <tr><td>1. Project Title</td><td class="toc-page">3</td></tr>
+        <tr><td>2. Introduction</td><td class="toc-page">3</td></tr>
+        <tr><td>3. Problem Statement</td><td class="toc-page">3</td></tr>
+        <tr><td>4. Objectives</td><td class="toc-page">4</td></tr>
+        <tr><td>5. Scope of the Project</td><td class="toc-page">4</td></tr>
+        <tr><td>6. Proposed System</td><td class="toc-page">5</td></tr>
+        <tr><td>7. Database Design</td><td class="toc-page">5</td></tr>
+        <tr><td>8. SQL Implementation</td><td class="toc-page">8</td></tr>
+        <tr><td>9. Sample SQL Queries</td><td class="toc-page">8</td></tr>
+        <tr><td>10. Expected Outcome</td><td class="toc-page">11</td></tr>
+        <tr><td>11. Conclusion</td><td class="toc-page">11</td></tr>
+        <tr><td>12. References</td><td class="toc-page">12</td></tr>
+    </table>
+    
+    <h1>1. Project Title</h1>
+    <p><strong>Library Management System</strong></p>
+    
+    <h1>2. Introduction</h1>
+    <p>A Library Management System is a web-based application that helps manage the daily activities of a library. It stores information about books, authors, categories, and members in a database. It also helps keep track of issued books, returned books, overdue books, and fines. The main purpose of this project is to make library management easier, faster, and more organized. Using HTML, CSS, JavaScript, Python Flask, and PostgreSQL, the system reduces manual work and makes it easier to access and update library records.</p>
+    
+    <h1>3. Problem Statement</h1>
+    <p>Managing a library involves maintaining records of books, authors, categories, members, and book borrowing activities. When these records are handled manually, it can become difficult to find books, check their availability, update member details, and keep track of issued and returned books. Manual record-keeping may also lead to duplicate entries, missing information, and errors. Another challenge is tracking book issue dates, due dates, overdue books, and fines. Without a proper system, librarians may find it difficult to identify overdue books and maintain accurate records of library transactions. Managing relationships between books, authors, members, and loan records can also become complicated when the information is not properly organized.</p>
+    <p>To solve these problems, a Library Management System is proposed using HTML, CSS, JavaScript, Python Flask, and PostgreSQL. The system will provide a centralized database to store, retrieve, and update library information efficiently. It will also use important DBMS</p>
+    
+    <div class="footer-box">Page 3</div>
+</div>
+
+<!-- ==================== PAGE 4: OBJECTIVES & SCOPE ==================== -->
+<div class="doc-page">
+    <div class="header-box">
+        <img src="{college_hdr}" alt="Fr. Conceicao Rodrigues College of Engineering">
+    </div>
+    
+    <p style="margin-top: 4pt;">concepts such as primary keys, foreign keys, joins, nested subqueries, aggregate functions, triggers, views, indexes, and transactions to maintain data accuracy and simplify database operations. The main aim is to reduce manual work, minimize errors, and make library management easier, faster, and more organized.</p>
+    
+    <h1>4. Objectives</h1>
+    <ul>
+        <li>To maintain book, author, category, and member records accurately.</li>
+        <li>To manage book issuing and returning smoothly with real-time inventory updates.</li>
+        <li>To track overdue books and calculate fines automatically without manual intervention.</li>
+        <li>To reduce manual work and eliminate duplicate records using relational normalization.</li>
+        <li>To apply core DBMS concepts such as joins, subqueries, aggregate functions, triggers, views, indexes, and transactions.</li>
+        <li>To provide a simple, responsive, and user-friendly web interface for seamless library administration.</li>
+    </ul>
+    
+    <h1>5. Scope of the Project</h1>
+    <ul>
+        <li><strong>Book Management:</strong> Add, view, update, and delete book records along with ISBN, category, publisher, and edition year.</li>
+        <li><strong>Member Management:</strong> Store and manage library member profiles, membership types (Student/Faculty), status, and contact details.</li>
+        <li><strong>Issue and Return:</strong> Record book lending and return activities with automated timestamp tracking.</li>
+        <li><strong>Overdue Tracking:</strong> Automatically identify overdue loans and compute applicable daily late fees.</li>
+        <li><strong>Database Operations:</strong> Perform multi-parameter searching, filtering, sorting, and analytical reporting across all tables.</li>
+        <li><strong>Data Integrity:</strong> Enforce primary keys, foreign keys, unique constraints, and check constraints to prevent invalid data entries.</li>
+        <li><strong>Database Analysis:</strong> Generate actionable operational insights using SQL queries, views, and aggregate functions.</li>
+    </ul>
+    
+    <div class="footer-box">Page 4</div>
+</div>
+
+<!-- ==================== PAGE 5: PROPOSED SYSTEM & ENTITIES ==================== -->
+<div class="doc-page">
+    <div class="header-box">
+        <img src="{college_hdr}" alt="Fr. Conceicao Rodrigues College of Engineering">
+    </div>
+    
+    <h1>6. Proposed System</h1>
+    <p>The proposed system is a web-based application with a frontend developed using HTML, CSS, and JavaScript, a backend developed using Python Flask, and PostgreSQL as the database. Users can manage books and members, issue and return books, and check overdue records through the application. The backend processes user requests and communicates with the PostgreSQL database to store and retrieve information. The system also uses advanced SQL concepts, including joins, subqueries, aggregate functions, PL/pgSQL functions, triggers, views, indexes, and transactions. These features help maintain data accuracy and make library operations more efficient.</p>
+    
+    <h1>7. Database Design</h1>
+    <h2>7.1 Entities and Attributes</h2>
+    
+    <div style="margin-bottom: 8pt;">
+        <h3 style="margin-bottom: 2pt;">1. Authors</h3>
+        <ul>
+            <li><code>author_id</code> (Integer, Primary Key, Auto-increment)</li>
+            <li><code>first_name</code> (Varchar, Author's first name, Not Null)</li>
+            <li><code>last_name</code> (Varchar, Author's last name, Not Null)</li>
+            <li><code>email</code> (Varchar, Contact email address, Unique)</li>
+        </ul>
+    </div>
+    
+    <div style="margin-bottom: 8pt;">
+        <h3 style="margin-bottom: 2pt;">2. Categories</h3>
+        <ul>
+            <li><code>category_id</code> (Integer, Primary Key, Auto-increment)</li>
+            <li><code>category_name</code> (Varchar, Category title, Unique, Not Null)</li>
+            <li><code>description</code> (Text, Brief summary of category topics)</li>
+        </ul>
+    </div>
+    
+    <div>
+        <h3 style="margin-bottom: 2pt;">3. Books</h3>
+        <ul>
+            <li><code>book_id</code> (Integer, Primary Key, Auto-increment)</li>
+        </ul>
+    </div>
+    
+    <div class="footer-box">Page 5</div>
+</div>
+
+<!-- ==================== PAGE 6: ENTITIES AND ATTRIBUTES (CONT.) ==================== -->
+<div class="doc-page">
+    <div class="header-box">
+        <img src="{college_hdr}" alt="Fr. Conceicao Rodrigues College of Engineering">
+    </div>
+    
+    <div style="margin-top: 2pt; margin-bottom: 8pt;">
+        <ul>
+            <li><code>isbn</code> (Varchar, 13-digit International Standard Book Number, Unique, Not Null)</li>
+            <li><code>title</code> (Varchar, Full title of the book, Not Null)</li>
+            <li><code>category_id</code> (Integer, Foreign Key referencing Categories)</li>
+            <li><code>publisher</code> (Varchar, Publishing company)</li>
+            <li><code>publication_year</code> (Integer, Year of publication)</li>
+            <li><code>total_copies</code> (Integer, Total physical stock count, Check &gt;= 0)</li>
+            <li><code>available_copies</code> (Integer, Current lendable shelf copies, Check &gt;= 0)</li>
+        </ul>
+    </div>
+    
+    <div style="margin-bottom: 8pt;">
+        <h3 style="margin-bottom: 2pt;">4. Book_Authors (Bridge Entity for M:N Relationship)</h3>
+        <ul>
+            <li><code>book_id</code> (Integer, Primary Key, Foreign Key referencing Books)</li>
+            <li><code>author_id</code> (Integer, Primary Key, Foreign Key referencing Authors)</li>
+        </ul>
+    </div>
+    
+    <div style="margin-bottom: 8pt;">
+        <h3 style="margin-bottom: 2pt;">5. Members</h3>
+        <ul>
+            <li><code>member_id</code> (Integer, Primary Key, Auto-increment)</li>
+            <li><code>member_code</code> (Varchar, Unique college card identification, Unique, Not Null)</li>
+            <li><code>first_name</code> (Varchar, Member's first name, Not Null)</li>
+            <li><code>last_name</code> (Varchar, Member's last name, Not Null)</li>
+            <li><code>email</code> (Varchar, Member's email address, Unique, Not Null)</li>
+            <li><code>phone</code> (Varchar, Contact telephone number)</li>
+            <li><code>address</code> (Text, Residential postal address)</li>
+            <li><code>membership_type</code> (Varchar, Category: Student, Faculty, Staff)</li>
+            <li><code>status</code> (Varchar, Status: Active, Suspended, Expired)</li>
+            <li><code>joined_date</code> (Date, Date of registration)</li>
+        </ul>
+    </div>
+    
+    <div>
+        <h3 style="margin-bottom: 2pt;">6. Loans</h3>
+        <ul>
+            <li><code>loan_id</code> (Integer, Primary Key, Auto-increment)</li>
+            <li><code>book_id</code> (Integer, Foreign Key referencing Books)</li>
+            <li><code>member_id</code> (Integer, Foreign Key referencing Members)</li>
+        </ul>
+    </div>
+    
+    <div class="footer-box">Page 6</div>
+</div>
+
+<!-- ==================== PAGE 7: ER DIAGRAM, SCHEMA, KEYS ==================== -->
+<div class="doc-page">
+    <div class="header-box">
+        <img src="{college_hdr}" alt="Fr. Conceicao Rodrigues College of Engineering">
+    </div>
+    
+    <div style="margin-top: 0; margin-bottom: 4pt;">
+        <ul>
+            <li><code>issue_date</code> (Date, Date when book was borrowed, Not Null)</li>
+            <li><code>due_date</code> (Date, Return deadline date, Not Null)</li>
+            <li><code>return_date</code> (Date, Actual return date, Nullable)</li>
+            <li><code>fine_amount</code> (Decimal, Late return penalty fee, Default 0.00)</li>
+            <li><code>status</code> (Varchar, Status: Issued, Returned, Overdue)</li>
+        </ul>
+    </div>
+    
+    <h2 style="margin-top: 3pt; margin-bottom: 2pt;">7.2 ER/EER Diagram</h2>
+    <div class="figure-container" style="margin: 3pt 0;">
+        <img src="{er_img}" alt="ER Diagram of Library Management System" style="max-height: 62mm; object-fit: contain; width: auto; margin: 0 auto;">
+        <div class="figure-caption">Figure 1: Entity-Relationship (ER) Diagram of the Library Management System (Chen Notation)</div>
+    </div>
+    
+    <h2 style="margin-top: 4pt; margin-bottom: 2pt;">7.3 Relational Schema</h2>
+    <div style="font-size: 10pt; line-height: 1.35; margin-bottom: 4pt;">
+        <div>&bull; <strong>Authors:</strong> <code>Authors(<u>author_id</u>, first_name, last_name, email)</code></div>
+        <div>&bull; <strong>Categories:</strong> <code>Categories(<u>category_id</u>, category_name, description)</code></div>
+        <div>&bull; <strong>Books:</strong> <code>Books(<u>book_id</u>, isbn, title, <em>category_id</em>, publisher, publication_year, total_copies, available_copies)</code></div>
+        <div>&bull; <strong>Book_Authors:</strong> <code>Book_Authors(<u><em>book_id</em></u>, <u><em>author_id</em></u>)</code></div>
+        <div>&bull; <strong>Members:</strong> <code>Members(<u>member_id</u>, member_code, first_name, last_name, email, phone, address, membership_type, status, joined_date)</code></div>
+        <div>&bull; <strong>Loans:</strong> <code>Loans(<u>loan_id</u>, <em>book_id</em>, <em>member_id</em>, issue_date, due_date, return_date, fine_amount, status)</code></div>
+    </div>
+    
+    <h2 style="margin-top: 3pt; margin-bottom: 2pt;">7.4 Primary Keys and Foreign Keys</h2>
+    <div style="font-size: 10pt; line-height: 1.35;">
+        <div><strong>Primary Keys (PK):</strong> Authors (<code>author_id</code>), Categories (<code>category_id</code>), Books (<code>book_id</code>), Book_Authors (<code>book_id, author_id</code>), Members (<code>member_id</code>), Loans (<code>loan_id</code>).</div>
+        <div style="margin-top: 2pt;"><strong>Foreign Keys (FK):</strong> Books.category_id &rarr; Categories, Book_Authors.book_id &rarr; Books, Book_Authors.author_id &rarr; Authors, Loans.book_id &rarr; Books, Loans.member_id &rarr; Members.</div>
+    </div>
+    
+    <div class="footer-box">Page 7</div>
+</div>
+
+<!-- ==================== PAGE 8: SQL IMPLEMENTATION & DDL QUERY ==================== -->
+<div class="doc-page">
+    <div class="header-box">
+        <img src="{college_hdr}" alt="Fr. Conceicao Rodrigues College of Engineering">
+    </div>
+    
+    <h1>8. SQL Implementation</h1>
+    <ul style="font-size: 10.5pt; line-height: 1.32; margin-bottom: 6pt;">
+        <li><strong>DDL (Data Definition Language):</strong> <code>CREATE TABLE</code> and <code>ALTER TABLE</code> to define relational structures, data types, and primary/foreign keys.</li>
+        <li><strong>DML (Data Manipulation Language):</strong> <code>INSERT</code>, <code>UPDATE</code>, and <code>DELETE</code> to perform record transactions safely.</li>
+        <li><strong>Basic SQL Queries:</strong> <code>SELECT</code>, <code>WHERE</code>, <code>ORDER BY</code>, and <code>DISTINCT</code> to query, filter, and sort library inventory.</li>
+        <li><strong>Integrity Constraints:</strong> <code>PRIMARY KEY</code>, <code>FOREIGN KEY</code>, <code>NOT NULL</code>, <code>UNIQUE</code>, and <code>CHECK</code> to ensure domain integrity.</li>
+        <li><strong>Joins:</strong> <code>INNER JOIN</code> and <code>LEFT JOIN</code> to retrieve composite book-author and loan-member data across relations.</li>
+        <li><strong>Nested Subqueries:</strong> Correlated and non-correlated nested subqueries to evaluate multi-condition lookups.</li>
+        <li><strong>Aggregate Functions:</strong> <code>COUNT()</code>, <code>SUM()</code>, <code>AVG()</code>, <code>MIN()</code>, and <code>MAX()</code> for library stock summaries.</li>
+        <li><strong>GROUP BY and HAVING:</strong> To aggregate borrowing volumes by genre and filter high-circulation categories.</li>
+        <li><strong>Functions and Triggers:</strong> PL/pgSQL stored procedures and triggers to automate available copy decrement on issue and increment on return.</li>
+        <li><strong>Views and Indexes:</strong> <code>vw_active_loans</code> view and B-tree indexes on ISBN and Member Code for sub-millisecond retrieval.</li>
+        <li><strong>Transactions:</strong> <code>BEGIN</code>, <code>COMMIT</code>, and <code>ROLLBACK</code> blocks ensuring strict ACID guarantees during multi-table loan workflows.</li>
+    </ul>
+    
+    <h1>9. Sample SQL Queries</h1>
+    <div style="font-size: 11pt; font-weight: bold; margin-top: 3pt;">Query 1: Table Creation (DDL) with Relational Constraints</div>
+    <div class="figure-container" style="margin: 4pt 0;">
+        <img src="{q_books_ddl}" alt="CREATE TABLE books DDL in pgAdmin" style="max-height: 40mm; width: auto; margin: 0 auto;">
+        <div class="figure-caption">Figure 2: CREATE TABLE books DDL statement executed in pgAdmin 4</div>
+    </div>
+    
+    <div class="footer-box">Page 8</div>
+</div>
+
+<!-- ==================== PAGE 9: SAMPLE SQL QUERIES (CONT.) ==================== -->
+<div class="doc-page">
+    <div class="header-box">
+        <img src="{college_hdr}" alt="Fr. Conceicao Rodrigues College of Engineering">
+    </div>
+    
+    <div style="font-size: 11pt; font-weight: bold; margin-top: 2pt;">Query 2: Data Retrieval & Verification (SELECT * FROM books)</div>
+    <div class="figure-container" style="margin: 4pt 0;">
+        <img src="{q_books_sel}" alt="SELECT * FROM books in pgAdmin" style="max-height: 48mm; width: auto; margin: 0 auto;">
+        <div class="figure-caption">Figure 3: SELECT * FROM books query execution result grid in pgAdmin 4</div>
+    </div>
+    
+    <div style="font-size: 11pt; font-weight: bold; margin-top: 6pt;">Query 3: Record Insertion (INSERT INTO members)</div>
+    <div class="figure-container" style="margin: 4pt 0;">
+        <img src="{q_members_ins}" alt="INSERT INTO members in pgAdmin" style="max-height: 30mm; width: auto; margin: 0 auto;">
+        <div class="figure-caption">Figure 4: INSERT INTO members DML execution with row count output</div>
+    </div>
+    
+    <div style="font-size: 11pt; font-weight: bold; margin-top: 6pt;">Query 4: Multi-Table INNER JOIN Query (Books with Categories)</div>
+    <div class="figure-container" style="margin: 4pt 0;">
+        <img src="{q_join}" alt="INNER JOIN Query in pgAdmin" style="max-height: 52mm; width: auto; margin: 0 auto;">
+        <div class="figure-caption">Figure 5: INNER JOIN query retrieving book titles with corresponding category names</div>
+    </div>
+    
+    <div class="footer-box">Page 9</div>
+</div>
+
+<!-- ==================== PAGE 10: SAMPLE SQL QUERIES (CONT.) ==================== -->
+<div class="doc-page">
+    <div class="header-box">
+        <img src="{college_hdr}" alt="Fr. Conceicao Rodrigues College of Engineering">
+    </div>
+    
+    <div style="font-size: 11pt; font-weight: bold; margin-top: 4pt;">Query 5: Nested Subquery with Aggregate Function (Above Average Inventory)</div>
+    <div class="figure-container" style="margin: 6pt 0;">
+        <img src="{q_subquery}" alt="Subquery with AVG in pgAdmin" style="max-height: 72mm; width: auto; margin: 0 auto;">
+        <div class="figure-caption">Figure 6: Subquery identifying books with copies above the average total inventory</div>
+    </div>
+    
+    <div style="font-size: 11pt; font-weight: bold; margin-top: 10pt;">Query 6: Database View Execution (Active Loans with Overdue Calculation)</div>
+    <div class="figure-container" style="margin: 6pt 0;">
+        <img src="{q_loans}" alt="vw_active_loans view in pgAdmin" style="max-height: 72mm; width: auto; margin: 0 auto;">
+        <div class="figure-caption">Figure 7: SELECT query querying the vw_active_loans view in pgAdmin 4</div>
+    </div>
+    
+    <div class="footer-box">Page 10</div>
+</div>
+
+<!-- ==================== PAGE 11: EXPECTED OUTCOME & CONCLUSION ==================== -->
+<div class="doc-page">
+    <div class="header-box">
+        <img src="{college_hdr}" alt="Fr. Conceicao Rodrigues College of Engineering">
+    </div>
+    
+    <h1>10. Expected Outcome & Screenshots</h1>
+    <p style="font-size: 10.5pt; line-height: 1.35; margin-bottom: 4pt;">The completed Library Management System achieves a fully functioning web application and relational database that streamlines all library workflows. The key outcomes achieved include:</p>
+    <ul style="font-size: 10pt; line-height: 1.32; margin-bottom: 4pt;">
+        <li><strong>Centralized Data Management:</strong> Complete elimination of manual register errors with ACID transactions.</li>
+        <li><strong>Automated Book Circulation:</strong> Instant issue and return tracking with automatic shelf copy synchronization.</li>
+        <li><strong>Dynamic Author Registration:</strong> On-the-fly author creation directly inside the book addition modal.</li>
+        <li><strong>Objective Fine Assessment:</strong> Trigger-based overdue penalty computation based on calendar day differences.</li>
+    </ul>
+    
+    <table style="width: 100%; border: none; margin: 2pt 0;">
+        <tr>
+            <td style="width: 50%; border: none; padding: 2pt; text-align: center; vertical-align: top;">
+                <img src="{dash_img}" alt="Web Dashboard Overview" style="width: 100%; border: 1px solid #ccc; display: block;">
+                <div class="figure-caption" style="font-size: 8.5pt;">Figure 8: Web Dashboard with Real-Time KPI Cards</div>
+            </td>
+            <td style="width: 50%; border: none; padding: 2pt; text-align: center; vertical-align: top;">
+                <img src="{modal_img}" alt="Add Book Modal" style="width: 100%; border: 1px solid #ccc; display: block;">
+                <div class="figure-caption" style="font-size: 8.5pt;">Figure 9: Book Entry Modal with Add Author Dialog</div>
+            </td>
+        </tr>
+    </table>
+    
+    <h1 style="margin-top: 4pt; margin-bottom: 3pt;">11. Conclusion</h1>
+    <p style="font-size: 10pt; line-height: 1.32; text-align: justify; margin-bottom: 3pt;">The Library Management System helps make library work easier and more organized by managing book details, member information, and book issue and return records in one place. It reduces the need for manual record-keeping and helps avoid common mistakes such as duplicate entries and incorrect information. By using HTML, CSS, JavaScript, Python Flask, and PostgreSQL, we have developed a system that makes storing, updating, and finding information more convenient.</p>
+    <p style="font-size: 10pt; line-height: 1.32; text-align: justify; margin-bottom: 3pt;">Through this project, we also gained practical knowledge of important DBMS concepts such as keys, constraints, joins, subqueries, aggregate functions, views, indexes, transactions, functions, and triggers. It helped us understand how a database works in a real-world application and how different technologies can be connected to build a useful system. In the future, more features like barcode scanning, due-date reminders, and online book reservations can be added to make the system even more useful.</p>
+    
+    <div class="footer-box">Page 11</div>
+</div>
+
+<!-- ==================== PAGE 12: REFERENCES & SIGN-OFF ==================== -->
+<div class="doc-page">
+    <div class="header-box">
+        <img src="{college_hdr}" alt="Fr. Conceicao Rodrigues College of Engineering">
+    </div>
+    
+    <h1>12. References</h1>
+    <ol style="font-size: 11pt; line-height: 1.45; margin-bottom: 18pt;">
+        <li>PostgreSQL Global Development Group, <em>PostgreSQL Documentation</em>. Available at: <a href="https://www.postgresql.org/docs/" style="color: #002147; text-decoration: none;">https://www.postgresql.org/docs/</a></li>
+        <li>Python Software Foundation, <em>Python Documentation</em>. Available at: <a href="https://docs.python.org/3/" style="color: #002147; text-decoration: none;">https://docs.python.org/3/</a></li>
+        <li>Pallets Projects, <em>Flask Documentation</em>. Available at: <a href="https://flask.palletsprojects.com/" style="color: #002147; text-decoration: none;">https://flask.palletsprojects.com/</a></li>
+        <li>MDN Web Docs, <em>HTML, CSS, and JavaScript Guides</em>. Available at: <a href="https://developer.mozilla.org/" style="color: #002147; text-decoration: none;">https://developer.mozilla.org/</a></li>
+        <li>W3Schools, <em>SQL Tutorial</em>. Available at: <a href="https://www.w3schools.com/sql/" style="color: #002147; text-decoration: none;">https://www.w3schools.com/sql/</a></li>
+        <li>Elmasri, R. and Navathe, S. B., <em>Fundamentals of Database Systems</em>, Pearson Education.</li>
+    </ol>
+    
+    <div style="margin-top: 25pt;">
+        <h2 style="font-size: 12pt; border-bottom: 1.5px solid #002147; padding-bottom: 3pt;">Project Team & Guide Approval</h2>
+        
+        <table class="spec-table" style="margin-top: 10pt; margin-bottom: 25pt;">
+            <thead>
+                <tr>
+                    <th style="width: 15%;">Roll No.</th>
+                    <th style="width: 45%;">Student Name</th>
+                    <th style="width: 25%;">Class</th>
+                    <th style="width: 15%;">Signature</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>11385</strong></td>
+                    <td>Aditya Chitimilla</td>
+                    <td>S.E. CSE - C</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><strong>11388</strong></td>
+                    <td>Atharva Doke</td>
+                    <td>S.E. CSE - C</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><strong>11393</strong></td>
+                    <td>Alroy Fernandes</td>
+                    <td>S.E. CSE - C</td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div style="margin-top: 40pt; display: flex; justify-content: space-between;">
+            <div style="width: 50%; float: left; text-align: left;">
+                <div style="border-top: 1px solid #333333; width: 200px; padding-top: 5pt;">
+                    <strong>Prof. Afreen Sayed</strong><br>
+                    Project Guide<br>
+                    Dept. of Computer Science & Engineering<br>
+                    CRCE, Mumbai
+                </div>
+            </div>
+            <div style="width: 50%; float: right; text-align: right;">
+                <div style="border-top: 1px solid #333333; width: 200px; padding-top: 5pt; margin-left: auto;">
+                    <strong>Head of Department</strong><br>
+                    Dept. of Computer Science & Engineering<br>
+                    CRCE, Mumbai
+                </div>
+            </div>
+            <div style="clear: both;"></div>
+        </div>
+    </div>
+    
+    <div class="footer-box">Page 12</div>
+</div>
+
+</body>
+</html>
+"""
+
+    with open(HTML_PATH, "w", encoding="utf-8") as f:
+        f.write(html)
+
+    print(f"[*] HTML successfully written: {HTML_PATH}")
+    file_url = to_file_url(HTML_PATH)
+    cmd = [
+        EDGE_PATH,
+        "--headless=new",
+        "--disable-gpu",
+        "--no-pdf-header-footer",
+        f"--print-to-pdf={PDF_PATH}",
+        file_url
+    ]
+    subprocess.run(cmd, check=True)
+    time.sleep(1)
+
+    if os.path.exists(PDF_PATH):
+        print(f"[+] Successfully generated PDF: {PDF_PATH} ({os.path.getsize(PDF_PATH)} bytes)")
+        reader = pypdf.PdfReader(PDF_PATH)
+        print(f"[+] Verified page count: {len(reader.pages)} pages")
+        for i, page in enumerate(reader.pages):
+            print(f"    Page {i+1}: {len(page.images)} image(s)")
+    else:
+        raise RuntimeError("Failed to generate PDF")
+
+
+if __name__ == "__main__":
+    generate_synopsis_pdf()

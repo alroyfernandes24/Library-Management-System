@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Management System | DBMS Mini Project</title>
+    <!-- Bootstrap 5 CSS (Local offline asset with CDN fallback) -->
+    <link href="/assets/bootstrap.min.css" rel="stylesheet" onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css';">
+    <!-- Font Awesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --dark-sidebar: #1e293b;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: #f8fafc;
+        }
+        .sidebar {
+            min-height: 100vh;
+            background-color: var(--dark-sidebar);
+            color: #cbd5e1;
+        }
+        .sidebar .nav-link {
+            color: #94a3b8;
+            font-weight: 500;
+            padding: 12px 18px;
+            border-radius: 8px;
+            margin: 4px 10px;
+            transition: all 0.2s;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            color: #ffffff;
+            background-color: #334155;
+        }
+        .sidebar .nav-link.active {
+            background-color: var(--primary-color);
+        }
+        .stat-card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+        .table th {
+            font-weight: 600;
+            background-color: #f1f5f9;
+        }
+        .badge-status {
+            font-size: 0.8rem;
+            padding: 5px 10px;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <nav class="col-md-3 col-lg-2 d-md-block sidebar p-0">
+            <div class="p-3 text-white border-bottom border-secondary">
+                <h5 class="mb-1"><i class="fa-solid fa-book-bookmark text-primary me-2"></i>LibrarySys</h5>
+                <small class="text-secondary">DBMS Mini Project</small>
+            </div>
+            <ul class="nav flex-column mt-3">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#" onclick="showSection('dashboard', this)">
+                        <i class="fa-solid fa-chart-pie me-2"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('books', this)">
+                        <i class="fa-solid fa-book me-2"></i> Book Catalog
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('members', this)">
+                        <i class="fa-solid fa-users me-2"></i> Members
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('loans', this)">
+                        <i class="fa-solid fa-arrow-right-arrow-left me-2"></i> Issue / Return
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('fines', this)">
+                        <i class="fa-solid fa-money-bill-wave me-2"></i> Fines & Penalties
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showSection('logs', this)">
+                        <i class="fa-solid fa-clock-rotate-left me-2"></i> Audit Logs
+                    </a>
+                </li>
+            </ul>
+            <div class="mt-auto p-3 text-secondary border-top border-secondary small">
+                Database: <span class="badge bg-success">SQLite / MySQL Ready</span>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+            <!-- Alert Banner -->
+            <div id="alertBox" class="alert d-none alert-dismissible fade show" role="alert">
+                <span id="alertMsg"></span>
+                <button type="button" class="btn-close" onclick="hideAlert()"></button>
+            </div>
+
+            <!-- SECTION 1: DASHBOARD -->
+            <div id="section-dashboard">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold mb-1">System Dashboard</h3>
+                        <p class="text-muted mb-0">Real-time statistics & normalized database overview</p>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm" onclick="loadDashboard()">
+                        <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh
+                    </button>
+                </div>
+
+                <!-- Metrics Grid -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4 col-sm-6">
+                        <div class="card stat-card p-3 border-start border-4 border-primary">
+                            <span class="text-muted small">Total Book Titles</span>
+                            <h2 class="fw-bold text-primary mb-0" id="stat-titles">0</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <div class="card stat-card p-3 border-start border-4 border-indigo" style="border-left-color: #6366f1 !important;">
+                            <span class="text-muted small">Total Volumes (Copies)</span>
+                            <h2 class="fw-bold mb-0" style="color: #6366f1;" id="stat-volumes">0</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <div class="card stat-card p-3 border-start border-4 border-success">
+                            <span class="text-muted small">Available on Shelves</span>
+                            <h2 class="fw-bold text-success mb-0" id="stat-available">0</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <div class="card stat-card p-3 border-start border-4 border-warning">
+                            <span class="text-muted small">Currently Issued</span>
+                            <h2 class="fw-bold text-warning mb-0" id="stat-borrowed">0</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <div class="card stat-card p-3 border-start border-4 border-purple" style="border-left-color: #8b5cf6 !important;">
+                            <span class="text-muted small">Active Members</span>
+                            <h2 class="fw-bold mb-0" style="color: #8b5cf6;" id="stat-members">0</h2>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <div class="card stat-card p-3 border-start border-4 border-danger">
+                            <span class="text-muted small">Pending Unpaid Fines</span>
+                            <h2 class="fw-bold text-danger mb-0" id="stat-fines">₹0.00</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2: BOOK CATALOG -->
+            <div id="section-books" class="d-none">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="fw-bold">Book Catalog</h3>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addBookModal">
+                        <i class="fa-solid fa-plus me-1"></i> Add New Book
+                    </button>
+                </div>
+
+                <div class="card p-3 mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" id="bookSearchInput" class="form-control" placeholder="Search by title, ISBN, or author..." onkeyup="filterBooks()">
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>ISBN</th>
+                                    <th>Title</th>
+                                    <th>Category</th>
+                                    <th>Author(s)</th>
+                                    <th>Year</th>
+                                    <th>Total</th>
+                                    <th>Avail</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="booksTableBody">
+                                <tr><td colspan="10" class="text-center py-4">Loading books...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 3: MEMBERS -->
+            <div id="section-members" class="d-none">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="fw-bold">Members Directory</h3>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMemberModal">
+                        <i class="fa-solid fa-user-plus me-1"></i> Register Member
+                    </button>
+                </div>
+
+                <div class="card p-3 mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" id="memberSearchInput" class="form-control" placeholder="Search by name, email, or phone..." onkeyup="filterMembers()">
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Full Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Joined</th>
+                                    <th>Active Borrows</th>
+                                    <th>Unpaid Fine</th>
+                                </tr>
+                            </thead>
+                            <tbody id="membersTableBody">
+                                <tr><td colspan="9" class="text-center py-4">Loading members...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 4: ISSUE / RETURN -->
+            <div id="section-loans" class="d-none">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="fw-bold">Borrow Transactions (Issue & Return)</h3>
+                    <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#issueModal">
+                        <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Issue Book
+                    </button>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold"><i class="fa-solid fa-clock text-warning me-2"></i>Active Issued Books (Loans in Progress)</h6>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>TxID</th>
+                                    <th>Book Title</th>
+                                    <th>Borrower Name</th>
+                                    <th>Email</th>
+                                    <th>Issue Date</th>
+                                    <th>Due Date</th>
+                                    <th>Overdue Days</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="loansTableBody">
+                                <tr><td colspan="9" class="text-center py-4">Loading active loans...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 5: FINES -->
+            <div id="section-fines" class="d-none">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="fw-bold">Fines & Penalties</h3>
+                </div>
+
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Fine ID</th>
+                                    <th>Tx ID</th>
+                                    <th>Member ID</th>
+                                    <th>Borrower Name</th>
+                                    <th>Book Title</th>
+                                    <th>Fine Amount</th>
+                                    <th>Status</th>
+                                    <th>Paid Date</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="finesTableBody">
+                                <tr><td colspan="9" class="text-center py-4">Loading fines...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 6: AUDIT LOGS -->
+            <div id="section-logs" class="d-none">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h3 class="fw-bold mb-1">DBMS Audit Logs (Triggers Output)</h3>
+                        <p class="text-muted mb-0">Live audit log generated by SQL Triggers upon database events</p>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm" onclick="loadLogs()">
+                        <i class="fa-solid fa-arrows-rotate me-1"></i> Refresh Logs
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Log ID</th>
+                                    <th>Table Name</th>
+                                    <th>Action Type</th>
+                                    <th>Audit Description</th>
+                                    <th>Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logsTableBody">
+                                <tr><td colspan="5" class="text-center py-4">Loading audit logs...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<!-- MODAL: ADD BOOK -->
+<div class="modal fade" id="addBookModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Add New Book to Catalog</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Book Title *</label>
+                    <input type="text" id="newBookTitle" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">ISBN *</label>
+                    <input type="text" id="newBookIsbn" class="form-control" placeholder="978-..." required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Category</label>
+                    <select id="newBookCategory" class="form-select"></select>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label mb-0">Author *</label>
+                        <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.82rem;" onclick="toggleNewAuthorSection()">
+                            ➕ Add New Author
+                        </button>
+                    </div>
+                    <select id="newBookAuthor" class="form-select" onchange="handleAuthorChange(this)"></select>
+
+                    <!-- Quick Add Author Box -->
+                    <div id="quickAddAuthorBox" class="p-3 mt-2 rounded border bg-light" style="display: none; border-left: 4px solid #0d6efd !important;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold small text-primary"><i class="bi bi-person-plus-fill me-1"></i> Register New Author</span>
+                            <button type="button" class="btn-close btn-sm" onclick="toggleNewAuthorSection(false)"></button>
+                        </div>
+                        <div class="mb-2">
+                            <input type="text" id="quickAuthorName" class="form-control form-control-sm" placeholder="Author Full Name *">
+                        </div>
+                        <div class="mb-2">
+                            <input type="email" id="quickAuthorEmail" class="form-control form-control-sm" placeholder="Author Email (optional)">
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="saveQuickAuthor()">Save & Select Author</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleNewAuthorSection(false)">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label">Publication Year</label>
+                        <input type="number" id="newBookYear" class="form-control" value="2024">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label">Total Copies</label>
+                        <input type="number" id="newBookCopies" class="form-control" value="5" min="1">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitAddBook()">Save Book</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: ADD MEMBER -->
+<div class="modal fade" id="addMemberModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Register New Member</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <label class="form-label">First Name *</label>
+                        <input type="text" id="newMemberFirst" class="form-control" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Last Name *</label>
+                        <input type="text" id="newMemberLast" class="form-control" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email *</label>
+                    <input type="email" id="newMemberEmail" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Phone</label>
+                    <input type="text" id="newMemberPhone" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Membership Type</label>
+                    <select id="newMemberType" class="form-select">
+                        <option value="Student">Student (Max 3 books)</option>
+                        <option value="Faculty">Faculty (Max 8 books)</option>
+                        <option value="General">General (Max 2 books)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitAddMember()">Register</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: ISSUE BOOK -->
+<div class="modal fade" id="issueModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Issue Book to Member</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Select Active Member *</label>
+                    <select id="issueMemberSelect" class="form-select"></select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Select Book (In Stock) *</label>
+                    <select id="issueBookSelect" class="form-select"></select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Loan Duration (Days)</label>
+                    <input type="number" id="issueDays" class="form-control" value="14" min="1">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="submitIssueBook()">Confirm & Issue</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap 5 JS Bundle (Local offline with CDN fallback) -->
+<script src="/assets/bootstrap.bundle.min.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js';"></script>
+
+<script>
+    // Navigation Control
+    function showSection(sectionId, element) {
+        document.querySelectorAll('main > div[id^="section-"]').forEach(div => div.classList.add('d-none'));
+        document.getElementById('section-' + sectionId).classList.remove('d-none');
+        document.querySelectorAll('.sidebar .nav-link').forEach(link => link.classList.remove('active'));
+        if (element) element.classList.add('active');
+
+        if (sectionId === 'dashboard') loadDashboard();
+        if (sectionId === 'books') loadBooks();
+        if (sectionId === 'members') loadMembers();
+        if (sectionId === 'loans') loadLoans();
+        if (sectionId === 'fines') loadFines();
+        if (sectionId === 'logs') loadLogs();
+    }
+
+    function showAlert(msg, type = 'success') {
+        const box = document.getElementById('alertBox');
+        box.className = `alert alert-${type} alert-dismissible fade show`;
+        document.getElementById('alertMsg').innerHTML = msg;
+        box.classList.remove('d-none');
+        setTimeout(() => hideAlert(), 5000);
+    }
+
+    function hideAlert() {
+        document.getElementById('alertBox').classList.add('d-none');
+    }
+
+    // API Calls
+    async function loadDashboard() {
+        try {
+            const res = await fetch('/api/summary');
+            const data = await res.json();
+            document.getElementById('stat-titles').textContent = data.total_titles;
+            document.getElementById('stat-volumes').textContent = data.total_volumes;
+            document.getElementById('stat-available').textContent = data.available_volumes;
+            document.getElementById('stat-borrowed').textContent = data.currently_borrowed;
+            document.getElementById('stat-members').textContent = data.active_members;
+            document.getElementById('stat-fines').textContent = `₹${parseFloat(data.pending_fines_amount).toFixed(2)}`;
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    let allBooks = [];
+    async function loadBooks() {
+        try {
+            const res = await fetch('/api/books');
+            allBooks = await res.json();
+            renderBooks(allBooks);
+            loadFormDropdowns();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function renderBooks(books) {
+        const tbody = document.getElementById('booksTableBody');
+        if (!books.length) {
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-muted">No books found.</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = books.map(b => `
+            <tr>
+                <td><span class="badge bg-light text-dark border">${b.book_id}</span></td>
+                <td><small class="font-monospace">${b.isbn}</small></td>
+                <td class="fw-semibold">${b.title}</td>
+                <td><span class="badge bg-info text-dark">${b.category_name || 'None'}</span></td>
+                <td><small class="text-muted">${b.authors || 'Unknown'}</small></td>
+                <td>${b.publication_year || '-'}</td>
+                <td>${b.total_copies}</td>
+                <td><span class="fw-bold ${b.available_copies > 0 ? 'text-success' : 'text-danger'}">${b.available_copies}</span></td>
+                <td><span class="badge badge-status ${b.status === 'Available' ? 'bg-success' : 'bg-danger'}">${b.status}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteBook(${b.book_id}, '${b.title}')">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function filterBooks() {
+        const query = document.getElementById('bookSearchInput').value.toLowerCase();
+        const filtered = allBooks.filter(b => 
+            b.title.toLowerCase().includes(query) || 
+            b.isbn.toLowerCase().includes(query) || 
+            (b.authors && b.authors.toLowerCase().includes(query))
+        );
+        renderBooks(filtered);
+    }
+
+    async function deleteBook(id, title) {
+        if (!confirm(`Are you sure you want to delete book: "${title}" (ID: ${id})?`)) return;
+        try {
+            const res = await fetch(`/api/books?id=${id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (res.ok) {
+                showAlert(`Book "${title}" deleted successfully!`);
+                loadBooks();
+                loadDashboard();
+            } else {
+                showAlert(data.error || 'Failed to delete book', 'danger');
+            }
+        } catch (e) {
+            showAlert('Server error', 'danger');
+        }
+    }
+
+    let allMembers = [];
+    async function loadMembers() {
+        try {
+            const res = await fetch('/api/members');
+            allMembers = await res.json();
+            renderMembers(allMembers);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function renderMembers(members) {
+        const tbody = document.getElementById('membersTableBody');
+        if (!members.length) {
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">No members found.</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = members.map(m => `
+            <tr>
+                <td><span class="badge bg-light text-dark border">${m.member_id}</span></td>
+                <td class="fw-semibold">${m.first_name} ${m.last_name}</td>
+                <td><small>${m.email}</small></td>
+                <td><small>${m.phone || '-'}</small></td>
+                <td><span class="badge bg-secondary">${m.membership_type}</span></td>
+                <td><span class="badge ${m.status === 'Active' ? 'bg-success' : 'bg-warning'}">${m.status}</span></td>
+                <td><small>${m.membership_date}</small></td>
+                <td><span class="badge bg-primary">${m.currently_issued} / ${m.max_books_allowed}</span></td>
+                <td><span class="${m.unpaid_fine > 0 ? 'text-danger fw-bold' : 'text-muted'}">₹${m.unpaid_fine.toFixed(2)}</span></td>
+            </tr>
+        `).join('');
+    }
+
+    function filterMembers() {
+        const q = document.getElementById('memberSearchInput').value.toLowerCase();
+        const filtered = allMembers.filter(m => 
+            (m.first_name + ' ' + m.last_name).toLowerCase().includes(q) || 
+            m.email.toLowerCase().includes(q) || 
+            (m.phone && m.phone.includes(q))
+        );
+        renderMembers(filtered);
+    }
+
+    async function loadLoans() {
+        try {
+            const res = await fetch('/api/loans');
+            const loans = await res.json();
+            const tbody = document.getElementById('loansTableBody');
+            if (!loans.length) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">No books currently borrowed.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = loans.map(l => `
+                <tr>
+                    <td><span class="badge bg-light text-dark border">${l.transaction_id}</span></td>
+                    <td class="fw-semibold">${l.book_title}</td>
+                    <td>${l.member_name}</td>
+                    <td><small class="text-muted">${l.member_email}</small></td>
+                    <td>${l.issue_date}</td>
+                    <td><strong>${l.due_date}</strong></td>
+                    <td>
+                        ${l.overdue_days > 0 ? `<span class="badge bg-danger">${l.overdue_days} days late</span>` : '<span class="text-success small">On schedule</span>'}
+                    </td>
+                    <td><span class="badge ${l.loan_status === 'Overdue' ? 'bg-danger' : 'bg-primary'}">${l.loan_status}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-success" onclick="returnBook(${l.transaction_id}, '${l.book_title}', '${l.member_name}')">
+                            <i class="fa-solid fa-arrow-down me-1"></i> Return
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            loadFormDropdowns();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function returnBook(txId, title, member) {
+        if (!confirm(`Confirm return of "${title}" borrowed by ${member}?`)) return;
+        try {
+            const res = await fetch('/api/return', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ transaction_id: txId })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                let msg = `Book "${title}" returned successfully!`;
+                if (data.fine > 0) {
+                    msg += ` <br><strong>⚠️ Overdue Fine Generated: ₹${data.fine.toFixed(2)}</strong>`;
+                }
+                showAlert(msg);
+                loadLoans();
+                loadDashboard();
+            } else {
+                showAlert(data.error || 'Failed to process return', 'danger');
+            }
+        } catch (e) {
+            showAlert('Server error', 'danger');
+        }
+    }
+
+    async function loadFines() {
+        try {
+            const res = await fetch('/api/fines');
+            const fines = await res.json();
+            const tbody = document.getElementById('finesTableBody');
+            if (!fines.length) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">No fines on record.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = fines.map(f => `
+                <tr>
+                    <td><span class="badge bg-light text-dark border">${f.fine_id}</span></td>
+                    <td>${f.transaction_id}</td>
+                    <td>${f.member_id}</td>
+                    <td class="fw-semibold">${f.member_name}</td>
+                    <td>${f.book_title}</td>
+                    <td class="fw-bold text-danger">₹${f.fine_amount.toFixed(2)}</td>
+                    <td><span class="badge ${f.paid_status === 'Paid' ? 'bg-success' : 'bg-danger'}">${f.paid_status}</span></td>
+                    <td><small>${f.paid_date || '-'}</small></td>
+                    <td>
+                        ${f.paid_status === 'Unpaid' ? 
+                            `<button class="btn btn-sm btn-success" onclick="payFine(${f.fine_id})"><i class="fa-solid fa-check me-1"></i> Pay Fine</button>` : 
+                            '<span class="text-muted small"><i class="fa-solid fa-check-double text-success"></i> Settled</span>'
+                        }
+                    </td>
+                </tr>
+            `).join('');
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function payFine(fineId) {
+        if (!confirm(`Mark Fine ID ${fineId} as Paid?`)) return;
+        try {
+            const res = await fetch('/api/fines/pay', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ fine_id: fineId })
+            });
+            if (res.ok) {
+                showAlert('Fine marked as Paid!');
+                loadFines();
+                loadDashboard();
+            } else {
+                showAlert('Failed to process payment', 'danger');
+            }
+        } catch (e) {
+            showAlert('Server error', 'danger');
+        }
+    }
+
+    async function loadLogs() {
+        try {
+            const res = await fetch('/api/logs');
+            const logs = await res.json();
+            const tbody = document.getElementById('logsTableBody');
+            if (!logs.length) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No audit logs available.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = logs.map(l => `
+                <tr>
+                    <td><span class="badge bg-light text-dark border">${l.log_id}</span></td>
+                    <td><code>${l.table_name}</code></td>
+                    <td><span class="badge bg-primary">${l.action_type}</span></td>
+                    <td>${l.description}</td>
+                    <td><small class="text-muted">${l.created_at}</small></td>
+                </tr>
+            `).join('');
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function loadFormDropdowns(selectedAuthorId = null) {
+        try {
+            const [catRes, authRes, memRes, bookRes] = await Promise.all([
+                fetch('/api/categories'),
+                fetch('/api/authors'),
+                fetch('/api/members'),
+                fetch('/api/books')
+            ]);
+            const categories = await catRes.json();
+            const authors = await authRes.json();
+            const members = await memRes.json();
+            const books = await bookRes.json();
+
+            // Book category dropdown
+            const catSel = document.getElementById('newBookCategory');
+            const prevCatVal = catSel.value;
+            catSel.innerHTML = categories.map(c => `<option value="${c.category_id}">${c.category_name}</option>`).join('');
+            if (prevCatVal) catSel.value = prevCatVal;
+
+            // Book author dropdown
+            const authSel = document.getElementById('newBookAuthor');
+            const targetAuthorVal = selectedAuthorId || (authSel.value !== '__NEW__' ? authSel.value : null);
+            authSel.innerHTML = authors.map(a => `<option value="${a.author_id}">${a.author_name}</option>`).join('') +
+                                `<option value="__NEW__">➕ + Add New Author...</option>`;
+            if (targetAuthorVal) {
+                authSel.value = targetAuthorVal;
+            }
+
+            // Issue member dropdown
+            const issueMemSel = document.getElementById('issueMemberSelect');
+            issueMemSel.innerHTML = members
+                .filter(m => m.status === 'Active')
+                .map(m => `<option value="${m.member_id}">${m.first_name} ${m.last_name} (${m.membership_type} - Current: ${m.currently_issued}/${m.max_books_allowed})</option>`).join('');
+
+            // Issue book dropdown (available only)
+            const issueBookSel = document.getElementById('issueBookSelect');
+            issueBookSel.innerHTML = books
+                .filter(b => b.available_copies > 0)
+                .map(b => `<option value="${b.book_id}">${b.title} (Available: ${b.available_copies}/${b.total_copies})</option>`).join('');
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    const populateDropdowns = loadFormDropdowns;
+
+    function toggleNewAuthorSection(show) {
+        const box = document.getElementById('quickAddAuthorBox');
+        if (show === undefined) {
+            box.style.display = (box.style.display === 'none' ? 'block' : 'none');
+        } else {
+            box.style.display = show ? 'block' : 'none';
+        }
+        if (box.style.display === 'block') {
+            document.getElementById('quickAuthorName').focus();
+        }
+    }
+
+    function handleAuthorChange(sel) {
+        if (sel.value === '__NEW__') {
+            toggleNewAuthorSection(true);
+        }
+    }
+
+    async function saveQuickAuthor() {
+        const name = document.getElementById('quickAuthorName').value.trim();
+        const email = document.getElementById('quickAuthorEmail').value.trim();
+        if (!name) {
+            alert('Please enter author name!');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/authors', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ author_name: name, email: email })
+            });
+            const data = await res.json();
+            if (res.ok && data.author_id) {
+                // Refresh dropdowns and auto-select new author
+                await loadFormDropdowns(data.author_id);
+                document.getElementById('newBookAuthor').value = data.author_id;
+                toggleNewAuthorSection(false);
+                document.getElementById('quickAuthorName').value = '';
+                document.getElementById('quickAuthorEmail').value = '';
+                showAlert(`Author "${name}" registered and selected!`);
+            } else {
+                alert(data.error || 'Failed to add author.');
+            }
+        } catch (e) {
+            alert('Error adding author: ' + e.message);
+        }
+    }
+
+    async function submitAddBook() {
+        const title = document.getElementById('newBookTitle').value.trim();
+        const isbn = document.getElementById('newBookIsbn').value.trim();
+        const category_id = parseInt(document.getElementById('newBookCategory').value);
+        let author_val = document.getElementById('newBookAuthor').value;
+        const year = parseInt(document.getElementById('newBookYear').value) || 2024;
+        const copies = parseInt(document.getElementById('newBookCopies').value) || 1;
+
+        if (!title || !isbn) {
+            alert('Title and ISBN are required!');
+            return;
+        }
+
+        let author_ids = [];
+        let new_author_name = null;
+
+        if (author_val === '__NEW__') {
+            const typedName = document.getElementById('quickAuthorName').value.trim();
+            if (!typedName) {
+                alert('Please enter the author name or choose an existing author!');
+                toggleNewAuthorSection(true);
+                return;
+            }
+            new_author_name = typedName;
+        } else {
+            author_ids = [parseInt(author_val)];
+        }
+
+        try {
+            const res = await fetch('/api/books', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    title, isbn, category_id, publication_year: year, total_copies: copies, 
+                    author_ids, new_author_name
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('addBookModal')).hide();
+                toggleNewAuthorSection(false);
+                showAlert(`Book "${title}" added successfully!`);
+                loadBooks();
+                loadDashboard();
+                loadFormDropdowns();
+            } else {
+                alert(data.error || 'Failed to add book');
+            }
+        } catch (e) {
+            alert('Server error: ' + e.message);
+        }
+    }
+
+    async function submitAddMember() {
+        const first_name = document.getElementById('newMemberFirst').value.trim();
+        const last_name = document.getElementById('newMemberLast').value.trim();
+        const email = document.getElementById('newMemberEmail').value.trim();
+        const phone = document.getElementById('newMemberPhone').value.trim();
+        const membership_type = document.getElementById('newMemberType').value;
+        const max_books = membership_type === 'Faculty' ? 8 : 3;
+
+        if (!first_name || !last_name || !email) {
+            alert('First Name, Last Name, and Email are required!');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/members', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ first_name, last_name, email, phone, membership_type, max_books })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('addMemberModal')).hide();
+                showAlert(`Member ${first_name} ${last_name} registered!`);
+                loadMembers();
+                loadDashboard();
+            } else {
+                alert(data.error || 'Failed to register member');
+            }
+        } catch (e) {
+            alert('Server error');
+        }
+    }
+
+    async function submitIssueBook() {
+        const member_id = parseInt(document.getElementById('issueMemberSelect').value);
+        const book_id = parseInt(document.getElementById('issueBookSelect').value);
+        const loan_days = parseInt(document.getElementById('issueDays').value) || 14;
+
+        if (!member_id || !book_id) {
+            alert('Please select both a member and a book!');
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/issue', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ member_id, book_id, loan_days })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('issueModal')).hide();
+                showAlert(`Book issued successfully! (Tx ID: ${data.transaction_id})`);
+                loadLoans();
+                loadBooks();
+                loadDashboard();
+            } else {
+                alert(data.error || 'Failed to issue book');
+            }
+        } catch (e) {
+            alert('Server error');
+        }
+    }
+
+    // Initial load
+    window.onload = () => {
+        loadDashboard();
+    };
+</script>
+</body>
+</html>
